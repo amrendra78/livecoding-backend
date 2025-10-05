@@ -1,6 +1,17 @@
 export default async function handler(req, res) {
-  // CORS headers for local development
-  res.setHeader('Access-Control-Allow-Origin', 'http://localhost:4200');
+  // ✅ PRODUCTION CORS - Multiple origins allow karo
+  const allowedOrigins = [
+    'http://localhost:4200',
+    'https://livecoding-ny2n.vercel.app',
+    'https://livecoding-4booqec6w-amrendra7624-gmailcoms-projects.vercel.app',
+    'https://livecoding.vercel.app'
+  ];
+  
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
