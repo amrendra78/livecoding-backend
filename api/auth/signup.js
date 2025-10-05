@@ -1,9 +1,9 @@
 export default async function handler(req, res) {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // CORS headers for local development
+  res.setHeader('Access-Control-Allow-Origin', 'http://localhost:4200');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   
   // Handle OPTIONS request (preflight)
   if (req.method === 'OPTIONS') {
@@ -22,19 +22,16 @@ export default async function handler(req, res) {
         });
       }
 
-      // Your signup logic here
       res.status(200).json({ 
         success: true, 
-        message: "Signup successful!",
+        message: "User registered successfully!",
         user: { name, email, id: Date.now() },
+        token: "mock-jwt-token",
         timestamp: new Date().toISOString()
       });
 
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: 'Internal server error'
-      });
+      res.status(500).json({ success: false, error: 'Internal server error' });
     }
   } else {
     res.status(405).json({ error: 'Method not allowed' });
