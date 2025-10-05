@@ -1,64 +1,25 @@
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
-
-// Mock database (same as signup)
-let users = [];
-
 export default async function handler(req, res) {
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+  
+  // Handle OPTIONS request (preflight)
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
   if (req.method === 'POST') {
-    try {
-      const { email, password } = req.body;
-
-      // Validation
-      if (!email || !password) {
-        return res.status(400).json({
-          success: false,
-          error: 'Email and password are required'
-        });
-      }
-
-      // Find user
-      const user = users.find(u => u.email === email);
-      if (!user) {
-        return res.status(400).json({
-          success: false,
-          error: 'Invalid email or password'
-        });
-      }
-
-      // Check password
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-      if (!isPasswordValid) {
-        return res.status(400).json({
-          success: false,
-          error: 'Invalid email or password'
-        });
-      }
-
-      // Generate token
-      const token = jwt.sign(
-        { userId: user.id, email: user.email },
-        process.env.JWT_SECRET || 'fallback_secret',
-        { expiresIn: '7d' }
-      );
-
-      // Return response (without password)
-      const userResponse = { ...user };
-      delete userResponse.password;
-
-      res.status(200).json({
-        success: true,
-        message: 'Login successful',
-        token,
-        user: userResponse
-      });
-
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: 'Internal server error'
-      });
-    }
+    // Your login logic here
+    res.status(200).json({ 
+      success: true, 
+      message: "Login successful!",
+      token: "jwt-token-here",
+      user: { name: "Test User", email: req.body.email, id: 123 },
+      timestamp: new Date().toISOString()
+    });
   } else {
     res.status(405).json({ error: 'Method not allowed' });
   }

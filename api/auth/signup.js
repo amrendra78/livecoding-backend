@@ -1,15 +1,20 @@
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
-
-// Mock database (replace with real MongoDB later)
-let users = [];
-
 export default async function handler(req, res) {
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+  
+  // Handle OPTIONS request (preflight)
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
   if (req.method === 'POST') {
     try {
       const { name, email, password } = req.body;
 
-      // Validation
       if (!name || !email || !password) {
         return res.status(400).json({
           success: false,
@@ -17,45 +22,12 @@ export default async function handler(req, res) {
         });
       }
 
-      // Check if user exists
-      const existingUser = users.find(user => user.email === email);
-      if (existingUser) {
-        return res.status(400).json({
-          success: false,
-          error: 'User already exists with this email'
-        });
-      }
-
-      // Hash password
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      // Create user
-      const user = {
-        id: Date.now().toString(),
-        name,
-        email,
-        password: hashedPassword,
-        createdAt: new Date().toISOString()
-      };
-
-      users.push(user);
-
-      // Generate token
-      const token = jwt.sign(
-        { userId: user.id, email: user.email },
-        process.env.JWT_SECRET || 'fallback_secret',
-        { expiresIn: '7d' }
-      );
-
-      // Return response (without password)
-      const userResponse = { ...user };
-      delete userResponse.password;
-
-      res.status(201).json({
-        success: true,
-        message: 'User registered successfully',
-        token,
-        user: userResponse
+      // Your signup logic here
+      res.status(200).json({ 
+        success: true, 
+        message: "Signup successful!",
+        user: { name, email, id: Date.now() },
+        timestamp: new Date().toISOString()
       });
 
     } catch (error) {
