@@ -2,12 +2,12 @@ import clientPromise from '../../lib/mongodb.js';
 import bcrypt from 'bcryptjs';
 
 export default async function handler(req, res) {
-  // ✅ CORS FIX - Add at the VERY TOP
+  // ✅ CORS HEADERS - ADD AT VERY TOP
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
   
-  // ✅ OPTIONS request handle karo
+  // ✅ HANDLE OPTIONS REQUEST
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
@@ -17,7 +17,6 @@ export default async function handler(req, res) {
     try {
       const { name, email, password } = req.body;
 
-      // Validation
       if (!name || !email || !password) {
         return res.status(400).json({
           success: false,
@@ -25,11 +24,10 @@ export default async function handler(req, res) {
         });
       }
 
-      // ✅ REAL DATABASE CONNECTION
+      // MongoDB connection
       const client = await clientPromise;
       const db = client.db('mydatabase');
       
-      // Check if user exists
       const existingUser = await db.collection('users').findOne({ email });
       if (existingUser) {
         return res.status(400).json({
@@ -38,10 +36,8 @@ export default async function handler(req, res) {
         });
       }
 
-      // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      // Create user
       const newUser = {
         name,
         email,
@@ -60,7 +56,7 @@ export default async function handler(req, res) {
           name: newUser.name,
           email: newUser.email
         },
-        token: "jwt-token-will-be-added",
+        token: "jwt-token-here",
         timestamp: new Date().toISOString()
       });
 

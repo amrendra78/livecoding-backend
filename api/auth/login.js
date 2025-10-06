@@ -2,11 +2,12 @@ import clientPromise from '../../lib/mongodb.js';
 import bcrypt from 'bcryptjs';
 
 export default async function handler(req, res) {
-  // CORS headers
+  // ✅ CORS HEADERS - ADD AT VERY TOP
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
   
+  // ✅ HANDLE OPTIONS REQUEST
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
@@ -23,11 +24,9 @@ export default async function handler(req, res) {
         });
       }
 
-      // MongoDB connection
       const client = await clientPromise;
       const db = client.db('mydatabase');
       
-      // Find user
       const user = await db.collection('users').findOne({ email });
       if (!user) {
         return res.status(400).json({
@@ -36,7 +35,6 @@ export default async function handler(req, res) {
         });
       }
 
-      // Check password
       const isPasswordValid = await bcrypt.compare(password, user.password);
       if (!isPasswordValid) {
         return res.status(400).json({
