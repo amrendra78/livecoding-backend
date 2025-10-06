@@ -10,8 +10,7 @@
   "dependencies": {
     "jsonwebtoken": "^9.0.2",
     "bcryptjs": "^2.4.3",
-    "mongoose": "^8.0.0",
-    "cors": "^2.8.5"
+    "mongodb": "^6.0.0"
   },
   "engines": {
     "node": "22.x"

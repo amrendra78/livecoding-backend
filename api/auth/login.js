@@ -1,25 +1,69 @@
+import clientPromise from '../../lib/mongodb.js';
+import bcrypt from 'bcryptjs';
+
 export default async function handler(req, res) {
   // CORS headers
-  res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
   
-  // Handle OPTIONS request (preflight)
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
   }
 
   if (req.method === 'POST') {
-    // Your login logic here
-    res.status(200).json({ 
-      success: true, 
-      message: "Login successful!",
-      token: "jwt-token-here",
-      user: { name: "Test User", email: req.body.email, id: 123 },
-      timestamp: new Date().toISOString()
-    });
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({
+          success: false,
+          error: 'Email and password are required'
+        });
+      }
+
+      // MongoDB connection
+      const client = await clientPromise;
+      const db = client.db('mydatabase');
+      
+      // Find user
+      const user = await db.collection('users').findOne({ email });
+      if (!user) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid email or password'
+        });
+      }
+
+      // Check password
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid email or password'
+        });
+      }
+
+      res.status(200).json({ 
+        success: true, 
+        message: "Login successful!",
+        user: { 
+          id: user._id,
+          name: user.name,
+          email: user.email
+        },
+        token: "jwt-token-here",
+        timestamp: new Date().toISOString()
+      });
+
+    } catch (error) {
+      console.error('Database error:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Internal server error' 
+      });
+    }
   } else {
     res.status(405).json({ error: 'Method not allowed' });
   }
