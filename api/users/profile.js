@@ -1,56 +1,52 @@
 import jwt from 'jsonwebtoken';
 
-// Mock database
-let users = [];
+export default async function handler(req, res) {
+  // CORS Headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
 
-export default function handler(req, res) {
   if (req.method === 'GET') {
     try {
-      // Get token from header
       const token = req.headers.authorization?.replace('Bearer ', '');
       
       if (!token) {
         return res.status(401).json({
           success: false,
-          error: 'No token provided'
+          error: 'Access token required'
         });
       }
 
       // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
-      
-      // Find user
-      const user = users.find(u => u.id === decoded.userId);
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          error: 'User not found'
-        });
-      }
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret-2024');
 
-      // Return user profile (without password)
-      const userResponse = { ...user };
-      delete userResponse.password;
-
+      // Mock user data
       res.status(200).json({
         success: true,
-        user: userResponse
+        user: {
+          id: decoded.userId,
+          name: 'John Doe',
+          email: decoded.email,
+          profileCompleted: true
+        },
+        timestamp: new Date().toISOString()
       });
 
     } catch (error) {
-      if (error.name === 'JsonWebTokenError') {
-        return res.status(401).json({
-          success: false,
-          error: 'Invalid token'
-        });
-      }
-      
-      res.status(500).json({
+      console.error('Profile error:', error);
+      res.status(401).json({
         success: false,
-        error: 'Internal server error'
+        error: 'Invalid or expired token'
       });
     }
   } else {
-    res.status(405).json({ error: 'Method not allowed' });
+    res.status(405).json({
+      success: false,
+      error: 'Method not allowed'
+    });
   }
 }

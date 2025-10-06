@@ -1,43 +1,51 @@
-import clientPromise from '../../lib/mongodb.js';
+import { connectToDatabase } from '../../lib/mongodb.js';
 import bcrypt from 'bcryptjs';
 
 export default async function handler(req, res) {
-  // ✅ CORS HEADERS - ADD AT VERY TOP
+  // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   
-  // ✅ HANDLE OPTIONS REQUEST
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+    return res.status(200).end();
   }
 
   if (req.method === 'POST') {
     try {
       const { name, email, password } = req.body;
 
+      // Validation
       if (!name || !email || !password) {
         return res.status(400).json({
           success: false,
-          error: 'All fields are required'
+          error: 'Name, email and password are required'
         });
       }
 
-      // MongoDB connection
-      const client = await clientPromise;
-      const db = client.db('mydatabase');
-      
+      if (password.length < 6) {
+        return res.status(400).json({
+          success: false,
+          error: 'Password must be at least 6 characters'
+        });
+      }
+
+      // Connect to database
+      const { db } = await connectToDatabase();
+
+      // Check if user exists
       const existingUser = await db.collection('users').findOne({ email });
       if (existingUser) {
-        return res.status(400).json({
+        return res.status(409).json({
           success: false,
           error: 'User already exists with this email'
         });
       }
 
-      const hashedPassword = await bcrypt.hash(password, 10);
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 12);
 
+      // Create user
       const newUser = {
         name,
         email,
@@ -48,26 +56,29 @@ export default async function handler(req, res) {
 
       const result = await db.collection('users').insertOne(newUser);
 
-      res.status(201).json({ 
-        success: true, 
-        message: "User registered successfully!",
-        user: { 
+      // Success response
+      res.status(201).json({
+        success: true,
+        message: 'User registered successfully!',
+        user: {
           id: result.insertedId,
-          name: newUser.name,
-          email: newUser.email
+          name,
+          email
         },
-        token: "jwt-token-here",
         timestamp: new Date().toISOString()
       });
 
     } catch (error) {
-      console.error('Database error:', error);
-      res.status(500).json({ 
-        success: false, 
-        error: 'Internal server error' 
+      console.error('Signup error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error'
       });
     }
   } else {
-    res.status(405).json({ error: 'Method not allowed' });
+    res.status(405).json({
+      success: false,
+      error: 'Method not allowed'
+    });
   }
 }
