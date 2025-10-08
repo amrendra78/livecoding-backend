@@ -7,8 +7,12 @@ const path = require('path');
 
 const app = express();
 
+// CORS configuration for both local and production
 app.use(cors({
-  origin: 'http://localhost:4200',
+  origin: [
+    'http://localhost:4200',
+    'https://livecoding-gamma.vercel.app'
+  ],
   credentials: true
 }));
 app.use(express.json());
@@ -108,9 +112,9 @@ const connectDB = async () => {
 
 connectDB();
 
-// SIGNUP ROUTE
+// ✅ ADD THIS: DIRECT SIGNUP ROUTE (for Angular compatibility)
 app.post('/api/signup', async (req, res) => {
-  console.log('📝 Signup request:', req.body);
+  console.log('📝 Direct Signup request:', req.body);
   
   try {
     const { name, email, password } = req.body;
@@ -205,6 +209,31 @@ app.post('/api/signup', async (req, res) => {
   }
 });
 
+// ✅ ADD THIS: Direct route for GET /api/signup (for testing)
+app.get('/api/signup', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Signup endpoint is working! Use POST method to register.',
+    example: {
+      method: 'POST',
+      url: '/api/signup',
+      body: {
+        name: 'Your Name',
+        email: 'your@email.com',
+        password: 'yourpassword'
+      }
+    }
+  });
+});
+
+// Import and use your existing routes
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
+
+// Use the route files
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+
 // GET USERS ROUTE
 app.get('/api/users', async (req, res) => {
   try {
@@ -276,9 +305,27 @@ app.get('/api/test', (req, res) => {
   });
 });
 
+// ROOT ENDPOINT
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Backend API is running!',
+    endpoints: [
+      'GET  /',
+      'GET  /api/test',
+      'POST /api/signup (for Angular)',
+      'POST /api/auth/signup',
+      'POST /api/auth/register',
+      'POST /api/auth/login',
+      'GET  /api/users',
+      'GET  /api/db-status'
+    ]
+  });
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📊 Primary Database: ${useMongoDB ? 'MongoDB Atlas' : 'File Database'}`);
   console.log(`👥 File Database Users: ${getAllUsersFromFileDB().length}`);
+  console.log(`🌐 CORS enabled for: localhost:4200 and livecoding-gamma.vercel.app`);
 });
