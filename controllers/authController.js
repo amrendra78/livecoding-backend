@@ -1,9 +1,8 @@
 const User = require('../models/User');
-const jwt = require('jsonwebtoken');
 
-// Generate JWT Token
+// Simple token simulation (remove JWT for now)
 const generateToken = (userId) => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '30d' });
+  return `simulated-token-${userId}-${Date.now()}`;
 };
 
 // Register User
@@ -39,12 +38,12 @@ const registerUser = async (req, res) => {
     const user = new User({
       name,
       email,
-      password
+      password // Will be stored as plain text temporarily
     });
 
     await user.save();
 
-    // Generate token
+    // Generate simple token
     const token = generateToken(user._id);
 
     res.status(201).json({
@@ -98,7 +97,7 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Check password
+    // Check password (plain text comparison for now)
     const isPasswordMatch = await user.comparePassword(password);
     if (!isPasswordMatch) {
       return res.status(400).json({
@@ -107,7 +106,7 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Generate token
+    // Generate simple token
     const token = generateToken(user._id);
 
     res.json({
@@ -131,17 +130,13 @@ const loginUser = async (req, res) => {
   }
 };
 
-// Verify token (for frontend to check if token is valid)
+// Verify token (simplified)
 const verifyToken = async (req, res) => {
   try {
     res.json({
       success: true,
       data: {
-        user: {
-          id: req.user._id,
-          name: req.user.name,
-          email: req.user.email
-        }
+        user: req.user || { id: 'demo', name: 'Demo User', email: 'demo@example.com' }
       }
     });
   } catch (error) {
