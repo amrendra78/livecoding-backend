@@ -12,7 +12,7 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// SIMPLE FILE DATABASE (NO MONGODB, NO BCRYPT)
+// SIMPLE FILE DATABASE
 const DB_FILE = path.join(__dirname, 'database.json');
 
 // Initialize file database
@@ -57,7 +57,7 @@ const getAllUsersFromFileDB = () => {
 // Initialize database
 initializeFileDB();
 
-// SIGNUP ROUTE - SIMPLE AND WORKING
+// SIGNUP ROUTE
 app.post('/api/signup', (req, res) => {
   console.log('📝 Signup request received:', req.body);
   
@@ -104,8 +104,7 @@ app.post('/api/signup', (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email
-      },
-      database: 'File Database'
+      }
     });
 
   } catch (error) {
@@ -145,8 +144,7 @@ app.get('/api/test', (req, res) => {
   res.json({
     success: true,
     message: 'Server is working perfectly! 🚀',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -169,7 +167,6 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log('🚀 Server started successfully!');
   console.log(`📍 Running on: http://localhost:${PORT}`);
-  console.log(`📊 Using: File Database`);
   console.log(`👥 Total users: ${getAllUsersFromFileDB().length}`);
   console.log('✅ Ready to accept requests!');
 });
