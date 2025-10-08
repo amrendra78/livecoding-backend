@@ -1,5 +1,4 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
@@ -13,9 +12,10 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// SIMPLE FILE DATABASE (NO EXTERNAL DEPENDENCIES)
+// SIMPLE FILE DATABASE (NO MONGODB, NO BCRYPT)
 const DB_FILE = path.join(__dirname, 'database.json');
 
+// Initialize file database
 const initializeFileDB = () => {
   if (!fs.existsSync(DB_FILE)) {
     fs.writeFileSync(DB_FILE, JSON.stringify({ users: [] }, null, 2));
@@ -54,20 +54,21 @@ const getAllUsersFromFileDB = () => {
   return readFileDB().users;
 };
 
-// Initialize file database
+// Initialize database
 initializeFileDB();
 
-// SIGNUP ROUTE - WORKING VERSION
-app.post('/api/signup', async (req, res) => {
-  console.log('📝 Signup request:', req.body);
+// SIGNUP ROUTE - SIMPLE AND WORKING
+app.post('/api/signup', (req, res) => {
+  console.log('📝 Signup request received:', req.body);
   
   try {
     const { name, email, password } = req.body;
 
+    // Validation
     if (!name || !email || !password) {
       return res.status(400).json({ 
         success: false,
-        message: 'All fields are required' 
+        message: 'Name, email and password are required' 
       });
     }
 
@@ -78,7 +79,7 @@ app.post('/api/signup', async (req, res) => {
       });
     }
 
-    // Check if user already exists
+    // Check if user exists
     const existingUser = findUserInFileDB(email);
     if (existingUser) {
       return res.status(409).json({ 
@@ -91,14 +92,14 @@ app.post('/api/signup', async (req, res) => {
     const user = addUserToFileDB({
       name: name.trim(),
       email: email.toLowerCase().trim(),
-      password: password // Storing as plain text for now
+      password: password
     });
 
-    console.log('✅ User saved to File Database');
+    console.log('✅ User registered successfully:', user.email);
 
     res.status(201).json({
       success: true,
-      message: 'User registered successfully',
+      message: 'User registered successfully!',
       user: {
         id: user.id,
         name: user.name,
@@ -111,13 +112,12 @@ app.post('/api/signup', async (req, res) => {
     console.error('❌ Signup error:', error);
     res.status(500).json({
       success: false,
-      message: 'Signup failed',
-      error: error.message
+      message: 'Internal server error during signup'
     });
   }
 });
 
-// GET USERS ROUTE
+// GET ALL USERS
 app.get('/api/users', (req, res) => {
   try {
     const users = getAllUsersFromFileDB().map(user => ({
@@ -133,7 +133,6 @@ app.get('/api/users', (req, res) => {
       users: users
     });
   } catch (error) {
-    console.error('Error fetching users:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching users'
@@ -141,49 +140,36 @@ app.get('/api/users', (req, res) => {
   }
 });
 
-// TEST ROUTE
+// TEST ENDPOINT
 app.get('/api/test', (req, res) => {
   res.json({
     success: true,
-    message: 'Server is working!',
+    message: 'Server is working perfectly! 🚀',
     timestamp: new Date().toISOString(),
-    database: 'File Database'
+    environment: process.env.NODE_ENV || 'development'
   });
 });
 
-// GET route for /api/signup (for testing)
-app.get('/api/signup', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Signup endpoint is working! Use POST method to register.',
-    example: {
-      method: 'POST',
-      url: '/api/signup',
-      body: {
-        name: 'Your Name',
-        email: 'your@email.com',
-        password: 'yourpassword'
-      }
-    }
-  });
-});
-
-// ROOT ENDPOINT
+// HEALTH CHECK
 app.get('/', (req, res) => {
   res.json({
+    success: true,
     message: 'Backend API is running!',
-    endpoints: [
-      'GET  /',
-      'GET  /api/test',
-      'POST /api/signup',
-      'GET  /api/users'
-    ]
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      'GET /': 'Health check',
+      'GET /api/test': 'Test endpoint', 
+      'POST /api/signup': 'User registration',
+      'GET /api/users': 'Get all users'
+    }
   });
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Database: File Database`);
-  console.log(`👥 Users: ${getAllUsersFromFileDB().length}`);
+  console.log('🚀 Server started successfully!');
+  console.log(`📍 Running on: http://localhost:${PORT}`);
+  console.log(`📊 Using: File Database`);
+  console.log(`👥 Total users: ${getAllUsersFromFileDB().length}`);
+  console.log('✅ Ready to accept requests!');
 });
