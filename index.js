@@ -1,4 +1,3 @@
-// index.js - SIMPLIFIED VERSION (NO EXTERNAL FILES)
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -7,17 +6,14 @@ const path = require('path');
 
 const app = express();
 
-// CORS configuration for both local and production
+// CORS configuration
 app.use(cors({
-  origin: [
-    'http://localhost:4200',
-    'https://livecoding-gamma.vercel.app'
-  ],
+  origin: ['http://localhost:4200', 'https://livecoding-gamma.vercel.app'],
   credentials: true
 }));
 app.use(express.json());
 
-// SIMPLE FILE DATABASE (BUILT-IN)
+// SIMPLE FILE DATABASE (NO EXTERNAL DEPENDENCIES)
 const DB_FILE = path.join(__dirname, 'database.json');
 
 const initializeFileDB = () => {
@@ -61,60 +57,9 @@ const getAllUsersFromFileDB = () => {
 // Initialize file database
 initializeFileDB();
 
-let useMongoDB = false;
-
-// MONGODB CONNECTION WITH BETTER ERROR HANDLING
-const connectDB = async () => {
-  try {
-    console.log('🔗 Attempting MongoDB connection...');
-    
-    // Try different password variations
-    const passwordOptions = [
-      'Akumar4078',  // Without URL encoding
-      'Akumar%4078', // With URL encoding
-      'Akumar@78'    // Actual password
-    ];
-
-    let connected = false;
-    
-    for (let password of passwordOptions) {
-      try {
-        const MONGODB_URI = `mongodb+srv://helloworlds078:${password}@cluster0.vbtdpkq.mongodb.net/mydatabase?retryWrites=true&w=majority`;
-        
-        console.log(`🔑 Trying password: ${password.replace(/./g, '*')}`);
-        
-        await mongoose.connect(MONGODB_URI, {
-          useNewUrlParser: true,
-          useUnifiedTopology: true,
-          serverSelectionTimeoutMS: 5000
-        });
-        
-        connected = true;
-        useMongoDB = true;
-        console.log('✅ MongoDB Connected Successfully!');
-        break;
-        
-      } catch (err) {
-        console.log(`❌ Failed with password: ${password.replace(/./g, '*')}`);
-      }
-    }
-
-    if (!connected) {
-      console.log('💡 Using File Database (MongoDB authentication failed)');
-      console.log('💡 Please check your MongoDB Atlas password in .env file');
-    }
-
-  } catch (error) {
-    console.log('❌ MongoDB Connection Failed. Using File Database.');
-    console.log('🔧 Error:', error.message);
-  }
-};
-
-connectDB();
-
-// ✅ ADD THIS: DIRECT SIGNUP ROUTE (for Angular compatibility)
+// SIGNUP ROUTE - WORKING VERSION
 app.post('/api/signup', async (req, res) => {
-  console.log('📝 Direct Signup request:', req.body);
+  console.log('📝 Signup request:', req.body);
   
   try {
     const { name, email, password } = req.body;
@@ -126,77 +71,40 @@ app.post('/api/signup', async (req, res) => {
       });
     }
 
-    let user;
-    let dbType = 'File Database';
-    
-    if (useMongoDB && mongoose.connection.readyState === 1) {
-      // Try MongoDB first
-      try {
-        // Define User model if not already defined
-        if (!mongoose.models.User) {
-          const userSchema = new mongoose.Schema({
-            name: String,
-            email: String,
-            password: String
-          }, { timestamps: true });
-          mongoose.model('User', userSchema);
-        }
-
-        const User = mongoose.model('User');
-        
-        const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
-        if (existingUser) {
-          return res.status(409).json({ 
-            success: false,
-            message: 'User already exists' 
-          });
-        }
-
-        const newUser = new User({
-          name: name.trim(),
-          email: email.toLowerCase().trim(),
-          password: password
-        });
-
-        user = await newUser.save();
-        dbType = 'MongoDB';
-        console.log('✅ User saved to MongoDB');
-        
-      } catch (mongoError) {
-        console.log('❌ MongoDB save failed, using file database:', mongoError.message);
-        useMongoDB = false;
-      }
-    }
-
-    // If MongoDB failed or not available, use file database
-    if (!user) {
-      const existingUser = findUserInFileDB(email);
-      if (existingUser) {
-        return res.status(409).json({ 
-          success: false,
-          message: 'User already exists' 
-        });
-      }
-
-      user = addUserToFileDB({
-        name: name.trim(),
-        email: email.toLowerCase().trim(),
-        password: password
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters'
       });
-      console.log('✅ User saved to File Database');
     }
 
-    console.log('🎉 Signup successful:', { email: user.email, database: dbType });
+    // Check if user already exists
+    const existingUser = findUserInFileDB(email);
+    if (existingUser) {
+      return res.status(409).json({ 
+        success: false,
+        message: 'User already exists with this email' 
+      });
+    }
+
+    // Create new user
+    const user = addUserToFileDB({
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
+      password: password // Storing as plain text for now
+    });
+
+    console.log('✅ User saved to File Database');
 
     res.status(201).json({
       success: true,
-      message: `User registered successfully (${dbType})`,
+      message: 'User registered successfully',
       user: {
-        id: user.id || user._id,
+        id: user.id,
         name: user.name,
         email: user.email
       },
-      database: dbType
+      database: 'File Database'
     });
 
   } catch (error) {
@@ -209,7 +117,41 @@ app.post('/api/signup', async (req, res) => {
   }
 });
 
-// ✅ ADD THIS: Direct route for GET /api/signup (for testing)
+// GET USERS ROUTE
+app.get('/api/users', (req, res) => {
+  try {
+    const users = getAllUsersFromFileDB().map(user => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      createdAt: user.createdAt
+    }));
+
+    res.json({
+      success: true,
+      count: users.length,
+      users: users
+    });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching users'
+    });
+  }
+});
+
+// TEST ROUTE
+app.get('/api/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Server is working!',
+    timestamp: new Date().toISOString(),
+    database: 'File Database'
+  });
+});
+
+// GET route for /api/signup (for testing)
 app.get('/api/signup', (req, res) => {
   res.json({
     success: true,
@@ -226,85 +168,6 @@ app.get('/api/signup', (req, res) => {
   });
 });
 
-// Import and use your existing routes
-const authRoutes = require('./routes/authRoutes');
-const userRoutes = require('./routes/userRoutes');
-
-// Use the route files
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-
-// GET USERS ROUTE
-app.get('/api/users', async (req, res) => {
-  try {
-    let users = [];
-    let dbType = 'File Database';
-    
-    if (useMongoDB && mongoose.connection.readyState === 1) {
-      try {
-        const User = mongoose.model('User');
-        users = await User.find({}, { password: 0 });
-        dbType = 'MongoDB';
-      } catch (mongoError) {
-        console.log('MongoDB fetch failed, using file database');
-        users = getAllUsersFromFileDB();
-      }
-    } else {
-      users = getAllUsersFromFileDB();
-    }
-
-    console.log(`📊 Found ${users.length} users in ${dbType}`);
-    
-    res.json({
-      success: true,
-      count: users.length,
-      users: users.map(user => ({
-        id: user.id || user._id,
-        name: user.name,
-        email: user.email,
-        createdAt: user.createdAt
-      })),
-      database: dbType
-    });
-  } catch (error) {
-    console.error('Error fetching users:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching users'
-    });
-  }
-});
-
-// DATABASE STATUS
-app.get('/api/db-status', (req, res) => {
-  const fileUsers = getAllUsersFromFileDB();
-  
-  res.json({
-    success: true,
-    databases: {
-      mongodb: {
-        status: useMongoDB ? 'Connected' : 'Disconnected',
-        readyState: mongoose.connection.readyState
-      },
-      file: {
-        status: 'Active',
-        usersCount: fileUsers.length
-      }
-    },
-    currentDatabase: useMongoDB ? 'MongoDB' : 'File Database'
-  });
-});
-
-// TEST ROUTE
-app.get('/api/test', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Server is working!',
-    timestamp: new Date().toISOString(),
-    database: useMongoDB ? 'MongoDB' : 'File Database'
-  });
-});
-
 // ROOT ENDPOINT
 app.get('/', (req, res) => {
   res.json({
@@ -312,20 +175,15 @@ app.get('/', (req, res) => {
     endpoints: [
       'GET  /',
       'GET  /api/test',
-      'POST /api/signup (for Angular)',
-      'POST /api/auth/signup',
-      'POST /api/auth/register',
-      'POST /api/auth/login',
-      'GET  /api/users',
-      'GET  /api/db-status'
+      'POST /api/signup',
+      'GET  /api/users'
     ]
   });
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📊 Primary Database: ${useMongoDB ? 'MongoDB Atlas' : 'File Database'}`);
-  console.log(`👥 File Database Users: ${getAllUsersFromFileDB().length}`);
-  console.log(`🌐 CORS enabled for: localhost:4200 and livecoding-gamma.vercel.app`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📊 Database: File Database`);
+  console.log(`👥 Users: ${getAllUsersFromFileDB().length}`);
 });
